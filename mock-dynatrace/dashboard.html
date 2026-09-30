@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>xAS Dynatrace Plugin - Benchmark & Mock Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --accent-blue: #38bdf8;
+      --accent-green: #4ade80;
+      --accent-amber: #fbbf24;
+      --accent-rose: #fb7185;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 16px; margin-bottom: 24px; }
+    h1 { font-size: 22px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 10px; }
+    .badge { font-size: 12px; background: #0369a1; color: #bae6fd; padding: 4px 10px; border-radius: 999px; }
+    .grid { display: grid; grid-template-columns: 360px 1fr 340px; gap: 20px; }
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; }
+    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 16px; }
+    
+    /* Reset Button */
+    .reset-btn { width: 100%; padding: 12px; margin-bottom: 16px; background: #15803d; border: 1px solid #22c55e; border-radius: 8px; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .reset-btn:hover { background: #16a34a; }
+
+    /* Scenario Buttons */
+    .scenario-btn { width: 100%; text-align: left; padding: 12px; margin-bottom: 10px; background: #0f172a; border: 1px solid var(--card-border); border-radius: 8px; color: var(--text); cursor: pointer; transition: all 0.2s; }
+    .scenario-btn:hover { border-color: var(--accent-blue); }
+    .scenario-btn.active { border-color: var(--accent-rose); background: #3b0716; }
+    .scenario-name { font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; }
+    .scenario-desc { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .scenario-val { font-size: 12px; font-weight: 700; color: var(--accent-blue); margin-top: 5px; }
+
+    /* Metrics Table */
+    .metrics-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    .metrics-table th, .metrics-table td { text-align: left; padding: 8px 10px; font-size: 12px; border-bottom: 1px solid #334155; }
+    .metrics-table th { color: var(--text-muted); font-weight: 600; }
+    .val-spike { color: var(--accent-rose); font-weight: 700; }
+    .val-normal { color: var(--accent-green); font-weight: 700; }
+    
+    /* Waterfall Section */
+    .waterfall-card { grid-column: span 3; }
+    .waterfall-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .total-timer { font-size: 32px; font-weight: 800; font-family: monospace; color: var(--accent-amber); }
+    .hop-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    .hop-table th, .hop-table td { text-align: left; padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #334155; }
+    .hop-table th { color: var(--text-muted); font-weight: 600; }
+    .bar-bg { background: #334155; height: 12px; border-radius: 6px; overflow: hidden; width: 100%; max-width: 280px; }
+    .bar-fill { height: 100%; background: var(--accent-blue); transition: width 0.3s; }
+    
+    /* Pod Cards */
+    .pod-grid { display: flex; flex-direction: column; gap: 8px; }
+    .pod-pill { display: flex; justify-content: space-between; align-items: center; background: #0f172a; border: 1px solid var(--card-border); border-radius: 6px; padding: 10px 14px; font-size: 13px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .status-running { background: var(--accent-green); }
+    .status-starting { background: var(--accent-amber); }
+    
+    pre { background: #0b1120; border: 1px solid var(--card-border); border-radius: 8px; padding: 12px; font-size: 11px; color: #38bdf8; overflow-x: auto; max-height: 180px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>
+      <span>⚡ xAS Dynatrace Integration Benchmark</span>
+      <span class="badge">Open Source Protocol</span>
+    </h1>
+    <div style="font-size: 13px; color: var(--text-muted);">
+      Target Workload: <b style="color: var(--text);" id="workloadLabel">default/sample-workload</b>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Column 1: Scenarios -->
+    <div class="card">
+      <h2>1. Trigger Test Scenario</h2>
+      
+      <button class="reset-btn" onclick="resetToNormal()">
+        <span>🟢</span> Return All Metrics to Normal
+      </button>
+
+      <div id="scenariosContainer">Loading scenarios...</div>
+    </div>
+
+    <!-- Column 2: All Dynatrace Metrics Coexisting -->
+    <div class="card">
+      <h2>2. Live Dynatrace Metrics Database (All Active)</h2>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">
+        In real Dynatrace, all these metrics are tracked simultaneously. The xAS provider queries whichever metric its policy references.
+      </p>
+
+      <table class="metrics-table">
+        <thead>
+          <tr>
+            <th>Dynatrace Metric Field</th>
+            <th>Current Value</th>
+            <th>HPA Target</th>
+          </tr>
+        </thead>
+        <tbody id="metricsTableBody">
+          <tr><td colspan="3">Loading metrics...</td></tr>
+        </tbody>
+      </table>
+
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px; margin-bottom: 6px;">
+        <div style="font-size: 11px; color: var(--text-muted);">SAMPLE DYNATRACE API JSON RESPONSE:</div>
+        <div style="font-size: 11px; color: var(--text-muted);">Last Polled: <span id="lastScrape" style="color: var(--accent-blue);">-</span></div>
+      </div>
+      <pre id="jsonPreview">// Awaiting request...</pre>
+    </div>
+
+    <!-- Column 3: Kubernetes Workload Target -->
+    <div class="card">
+      <h2>3. Kubernetes Workload Target</h2>
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px;">
+        <div style="background: rgba(56, 189, 248, 0.08); padding: 14px 18px; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; margin-right: 12px;">
+          <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">TARGET REPLICAS</div>
+          <div style="font-size: 38px; font-weight: 800; color: var(--accent-blue); margin-top: 4px;" id="targetReplicas">1</div>
+        </div>
+        <div style="background: rgba(34, 197, 94, 0.08); padding: 14px 18px; border-radius: 8px; border: 1px solid var(--border-color); flex: 1;">
+          <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">READY PODS</div>
+          <div style="font-size: 38px; font-weight: 800; color: var(--accent-green); margin-top: 4px;" id="readyReplicas">1</div>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-primary); padding: 12px 16px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px;">
+        <div style="margin-bottom: 6px; display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Workload:</span>
+          <span id="workloadLabel" style="font-family: monospace; color: var(--accent-blue); font-weight: 600;">default/sample-workload</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Cluster Status:</span>
+          <span style="color: var(--accent-green); font-weight: 600;"><span class="status-dot status-running" style="display: inline-block; vertical-align: middle; margin-right: 4px;"></span>Live GKE Connected</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Latency Waterfall Tracker -->
+    <div class="card waterfall-card">
+      <div class="waterfall-header">
+        <div>
+          <h2>Hop-By-Hop Autoscaling Latency Waterfall</h2>
+          <div style="font-size: 13px; color: var(--text-muted);">Measures every internal step between services before HPA / xAS updates target</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 11px; color: var(--text-muted);">TOTAL REACTION LATENCY</div>
+          <div class="total-timer" id="totalLatencyTimer">0.0s</div>
+        </div>
+      </div>
+
+      <table class="hop-table">
+        <thead>
+          <tr>
+            <th>Hop #</th>
+            <th>Service Pipeline Step</th>
+            <th>Measured Interval</th>
+            <th>Latency (ms)</th>
+            <th>Timeline Share</th>
+          </tr>
+        </thead>
+        <tbody id="waterfallBody">
+          <tr>
+            <td>1</td>
+            <td><b>Dynatrace &rarr; xAS Ingestion</b> (Mock &rarr; Provider &rarr; Control Plane)</td>
+            <td>Trigger click to metric ingested in xAS (0–3s poll wait + scrape)</td>
+            <td id="hop1Ms">0 ms</td>
+            <td><div class="bar-bg"><div class="bar-fill" id="hop1Bar" style="width: 0%;"></div></div></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><b>Recommender Decision</b> (Control Plane &rarr; Recommender)</td>
+            <td>Algorithm evaluation & scaling target computation</td>
+            <td id="hop2Ms">0 ms</td>
+            <td><div class="bar-bg"><div class="bar-fill" id="hop2Bar" style="width: 0%;"></div></div></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><b>K8s Actuation</b> (Controller &rarr; Deployment)</td>
+            <td>Arbitration & PATCH spec.replicas</td>
+            <td id="hop3Ms">0 ms</td>
+            <td><div class="bar-bg"><div class="bar-fill" id="hop3Bar" style="width: 0%;"></div></div></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 24px; margin-bottom: 10px;">
+        <h2 style="margin: 0;">Recent Benchmark Runs</h2>
+        <span style="font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em;">History Capacity: 100 Entries (Scrollable)</span>
+      </div>
+      <div style="max-height: 440px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: 8px;">
+        <table class="hop-table" style="margin-top: 0; width: 100%;">
+          <thead style="position: sticky; top: 0; background: var(--card-bg); z-index: 2; box-shadow: 0 1px 0 var(--card-border);">
+            <tr>
+              <th>Timestamp</th>
+              <th>Scenario</th>
+              <th>Scale Transition</th>
+              <th>Dynatrace &rarr; xAS Ingest</th>
+              <th>Decision Latency</th>
+              <th>Actuation</th>
+              <th>Total Reaction</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr><td colspan="7" style="color: var(--text-muted); text-align: center;">No completed benchmark runs yet. Trigger a scenario above!</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function triggerScenario(id) {
+      await fetch('/mock/scenario/' + id, { method: 'POST' });
+      pollStatus();
+    }
+
+    async function resetToNormal() {
+      await fetch('/mock/reset', { method: 'POST' });
+      pollStatus();
+    }
+
+    async function pollStatus() {
+      try {
+        const res = await fetch('/mock/status');
+        const data = await res.json();
+
+        // Sort scenarios so P90 Latency is always first
+        const allScenarios = Object.values(data.scenarios);
+        const p90Sc = allScenarios.find(s => s.id === 'p90-latency');
+        const otherScenarios = allScenarios.filter(s => s.id !== 'p90-latency' && s.id !== 'reset');
+
+        const isJitter = data.jitterActive;
+        let p90Html = '';
+        if (p90Sc) {
+          const isSpike = p90Sc.isSpike;
+          const statusText = isSpike ? "🚨 SPIKE ACTIVE" : "Normal";
+          p90Html = `
+            <div style="font-size: 11px; font-weight: 700; color: var(--accent-blue); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">★ P90 Latency Tests (Primary)</div>
+            <div class="scenario-btn ${isSpike ? 'active' : ''}" onclick="triggerScenario('p90-latency')" style="border-left: 4px solid var(--accent-blue);">
+              <div class="scenario-name">
+                <span>${p90Sc.name}</span>
+                <span style="color: ${isSpike ? 'var(--accent-rose)' : 'var(--accent-green)'}">${statusText}</span>
+              </div>
+              <div class="scenario-desc">${p90Sc.description}</div>
+              <div class="scenario-val">Spikes to: ${p90Sc.spikeValue} ${p90Sc.unit}</div>
+            </div>
+            
+            <div id="unconnectedScenarios" style="display: none;">
+              <div class="scenario-btn ${isJitter ? 'active' : ''}" onclick="triggerScenario('jitter')" style="border-left: 4px solid var(--accent-amber);">
+                <div class="scenario-name">
+                  <span>🔀 P90 Latency Jitter / Flapping</span>
+                  <span style="color: ${isJitter ? 'var(--accent-rose)' : 'var(--accent-green)'}">${isJitter ? "🚨 JITTER ACTIVE" : "Normal"}</span>
+                </div>
+                <div class="scenario-desc">Dynamically modifies P90 latency (135ms &harr; 165ms every 2s)</div>
+                <div class="scenario-val" style="color: var(--accent-amber);">Modifies: builtin:service.response.time:percentile(90)</div>
+              </div>
+          `;
+        }
+
+        const otherScenariosHtml = otherScenarios.map(sc => {
+          const isSpike = sc.isSpike;
+          const statusText = isSpike ? "🚨 SPIKE ACTIVE" : "Normal";
+          return `
+            <div class="scenario-btn ${isSpike ? 'active' : ''}" onclick="triggerScenario('${sc.id}')">
+              <div class="scenario-name">
+                <span>${sc.name}</span>
+                <span style="color: ${isSpike ? 'var(--accent-rose)' : 'var(--accent-green)'}">${statusText}</span>
+              </div>
+              <div class="scenario-desc">${sc.description}</div>
+              <div class="scenario-val">Spikes to: ${sc.spikeValue} ${sc.unit}</div>
+            </div>
+          `;
+        }).join('');
+
+        const container = document.getElementById('scenariosContainer');
+        container.innerHTML = p90Html + otherScenariosHtml + `</div>`;
+
+        // 2. Render All Metrics in Coexistence Table (P90 always row #1, others hidden)
+        const sortedMetrics = allScenarios.filter(s => s.id !== 'reset').sort((a, b) => {
+          if (a.id === 'p90-latency') return -1;
+          if (b.id === 'p90-latency') return 1;
+          return 0;
+        });
+
+        const metricsBody = document.getElementById('metricsTableBody');
+        metricsBody.innerHTML = sortedMetrics.map(sc => {
+          let jitterBadge = "";
+          let highlightStyle = "";
+          let targetDisplay = `<span style="color: var(--text-muted); font-style: italic;">Not set</span>`;
+          let displayStyle = "";
+          if (sc.id === 'p90-latency') {
+            highlightStyle = "background: rgba(56, 189, 248, 0.08); font-weight: 600;";
+            const tgt = data.scalingPolicyTarget || "150ms";
+            targetDisplay = `<span style="color: var(--accent-blue); font-weight: 700; font-family: monospace;">${tgt}</span>`;
+            if (data.jitterActive) {
+              jitterBadge = " <span style='font-size: 10px; color: var(--accent-amber); font-weight: bold;'>[JITTER ACTIVE]</span>";
+            }
+          } else {
+            // Keep unconnected metrics hidden for a clean presentation
+            displayStyle = "display: none;";
+          }
+          return `
+            <tr style="${highlightStyle} ${displayStyle}">
+              <td><code>${sc.metricId}</code></td>
+              <td class="${sc.isSpike ? 'val-spike' : 'val-normal'}">${sc.currentValue} ${sc.unit}${jitterBadge}</td>
+              <td>${targetDisplay}</td>
+            </tr>
+          `;
+        }).join('');
+
+        document.getElementById('lastScrape').innerText = data.lastScrapeAgoSec + "s ago (" + data.queryCount + " total queries)";
+
+        document.getElementById('jsonPreview').innerText = JSON.stringify({
+          totalCount: 1,
+          metricId: data.activeScenario.metricId,
+          data: [{
+            dimensions: ["SERVICE-SAMPLE-01"],
+            timestamps: [Date.now() - 60000, Date.now()],
+            values: [data.activeScenario.currentValue, data.activeScenario.currentValue]
+          }]
+        }, null, 2);
+
+        // 3. Render Kubernetes Target Numbers
+        document.getElementById('workloadLabel').innerText = data.k8s.namespace + '/' + data.k8s.deployment;
+        document.getElementById('targetReplicas').innerText = data.k8s.targetReplicas;
+        document.getElementById('readyReplicas').innerText = data.k8s.readyReplicas;
+
+        // 4. Render Latency Waterfall
+        if (data.waterfall) {
+          const wf = data.waterfall;
+          const totalSec = (wf.totalMs / 1000).toFixed(1);
+          document.getElementById('totalLatencyTimer').innerText = totalSec + 's';
+          document.getElementById('totalLatencyTimer').style.color = wf.isCompleted ? 'var(--accent-green)' : 'var(--accent-amber)';
+
+          const max = Math.max(wf.totalMs, 1);
+          document.getElementById('hop1Ms').innerText = wf.ingestMs + ' ms';
+          document.getElementById('hop1Bar').style.width = Math.min(100, (wf.ingestMs / max) * 100) + '%';
+
+          document.getElementById('hop2Ms').innerText = wf.decisionMs + ' ms';
+          document.getElementById('hop2Bar').style.width = Math.min(100, (wf.decisionMs / max) * 100) + '%';
+
+          document.getElementById('hop3Ms').innerText = wf.actuationMs + ' ms';
+          document.getElementById('hop3Bar').style.width = Math.min(100, (wf.actuationMs / max) * 100) + '%';
+        }
+
+        // 5. Render History
+        if (data.history && data.history.length > 0) {
+          document.getElementById('historyBody').innerHTML = data.history.map(h => `
+            <tr>
+              <td>${h.timestamp}</td>
+              <td><b>${h.scenarioName}</b></td>
+              <td>${h.fromReplicas} &rarr; ${h.toReplicas} pods</td>
+              <td>${h.ingestDelayMs} ms</td>
+              <td>${h.decisionDelayMs} ms</td>
+              <td>${h.actuationDelayMs} ms</td>
+              <td style="font-weight: 700; color: var(--accent-amber);">${(h.totalReactionMs / 1000).toFixed(1)}s</td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {
+        console.error("Poll failed:", e);
+      }
+    }
+
+    setInterval(pollStatus, 1000);
+    pollStatus();
+  </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+apiVersion: xas.io/v1
+kind: ScalingPolicy
+metadata:
+  name: sample-workload-scaling
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sample-workload
+
+  providerRef:
+    name: dynatrace
+
+  # Explicit scaling strategy
+  strategy:
+    type: Horizontal
+
+  horizontal:
+    minReplicas: 1
+    maxReplicas: 5
+
+  # 1. WHAT to measure (metric query selector)
+  metrics:
+    - name: "p90_latency"
+      metric: "builtin:service.response.time:percentile(90)"
+      entitySelector: "type(SERVICE),entityName(frontend)"
+
+  # 2. HOW to scale (Target defined ONCE here)
+  scaling:
+    - recommender: "linear"
+      name: "p90-latency-target"
+      params:
+        metric: "p90_latency"
+        target: "150ms"

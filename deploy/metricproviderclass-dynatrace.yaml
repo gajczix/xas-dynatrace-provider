@@ -1,0 +1,10 @@
+apiVersion: xas.io/v1
+kind: MetricProviderClass
+metadata:
+  name: dynatrace
+spec:
+  type: Dynatrace
+  config:
+    endpoint: "http://<DYNATRACE_ENDPOINT>"
+    apiTokenSecretRef: "dynatrace-token"
+    scrapeInterval: "5s"

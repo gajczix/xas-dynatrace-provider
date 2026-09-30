@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dynatrace-metric-provider
+  namespace: default
+  labels:
+    app: dynatrace-metric-provider
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dynatrace-metric-provider
+  template:
+    metadata:
+      labels:
+        app: dynatrace-metric-provider
+    spec:
+      containers:
+        - name: provider
+          image: dynatrace-metric-provider:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DYNATRACE_ENDPOINT
+              value: "http://<DYNATRACE_ENDPOINT>"
+            - name: DYNATRACE_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: dynatrace-token
+                  key: api-token
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

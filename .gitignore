@@ -1,0 +1,11 @@
+# Binaries
+mock-dynatrace/mock-dynatrace-server
+xas-controller/xas-controller
+dynatrace-metric-provider/dynatrace-metric-provider
+
+# OS & Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
