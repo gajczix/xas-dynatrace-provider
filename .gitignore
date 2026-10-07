@@ -1,11 +1,23 @@
 # Binaries
-mock-dynatrace/mock-dynatrace-server
-xas-controller/xas-controller
-dynatrace-metric-provider/dynatrace-metric-provider
+bin/
+/dynatrace-provider
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-# OS & Editor
-.DS_Store
+# Test artifacts
+*.test
+*.out
+coverage.txt
+
+# IDE & Editor files
 .idea/
 .vscode/
 *.swp
 *~
+
+# OS specific
+.DS_Store
+Thumbs.db

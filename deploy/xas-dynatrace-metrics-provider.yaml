@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: xas-dynatrace-metrics-provider
+  namespace: xas-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: xas-dynatrace-metrics-provider
+rules:
+  - apiGroups: ["xas.io"]
+    resources: ["metricproviderclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: xas-dynatrace-metrics-provider
+subjects:
+  - kind: ServiceAccount
+    name: xas-dynatrace-metrics-provider
+    namespace: xas-system
+roleRef:
+  kind: ClusterRole
+  name: xas-dynatrace-metrics-provider
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xas-dynatrace-metrics-provider
+  namespace: xas-system
+  labels:
+    app: xas-dynatrace-metrics-provider
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: xas-dynatrace-metrics-provider
+  template:
+    metadata:
+      labels:
+        app: xas-dynatrace-metrics-provider
+    spec:
+      serviceAccountName: xas-dynatrace-metrics-provider
+      containers:
+        - name: provider
+          image: xas-dynatrace-provider:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--server-address=xas-server.xas-system.svc.cluster.local:80"
+            - "--cluster-name=default"
+            - "--scrape-interval=5s"
+            - "--debug"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

@@ -5,6 +5,7 @@ metadata:
 spec:
   type: Dynatrace
   config:
-    endpoint: "http://<DYNATRACE_ENDPOINT>"
+    # URL to Dynatrace environment (e.g. https://<env-id>.live.dynatrace.com) or mock VM
+    endpoint: "http://34.140.132.84:8080"
+    # Kubernetes secret containing the 'api-token' key
     apiTokenSecretRef: "dynatrace-token"
-    scrapeInterval: "5s"

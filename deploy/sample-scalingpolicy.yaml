@@ -1,0 +1,30 @@
+apiVersion: xas.io/v1
+kind: ScalingPolicy
+metadata:
+  name: sample-workload-dynatrace
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sample-workload
+  minReplicas: 1
+  maxReplicas: 5
+
+  metrics:
+    # 1. Latency metric queried directly from Dynatrace via the provider
+    - name: "p90_latency"
+      provider: "dynatrace" # References MetricProviderClass/dynatrace
+      params:
+        metricSelector: "builtin:service.response.time:percentile(90)"
+      gauge:
+        aggregation: "Avg"
+
+  scaling:
+    # Target maintaining average latency around 250ms (or target unit)
+    - recommender: "linear"
+      name: "latency_target"
+      params:
+        metric: "p90_latency"
+        target: "150.0"
+        mode: "Active"
